@@ -1,6 +1,6 @@
 # Introduction
 
-Flask-IP-Floodgate is a small Python package that provides rate limiting functionalities for Flask endpoints.
+FlaskFloodgate is a small Python package that provides rate limiting functionalities for Flask endpoints.
 
 # Current Features
 - Rate limit IPs.
@@ -103,3 +103,9 @@ def rate_limited():
     return 'Hello!', 200
 
 ```
+
+# Documentation
+For detailed functions, check out the documentation: [FlaskFloodgate Documentation](https://flaskfloodgate.readthedocs.io/en/latest/introduction.html)
+
+# Contact
+You can contact me on my email: ivoscev@gmail.com
