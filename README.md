@@ -83,7 +83,7 @@ You can contact me on my email: ivoscev@gmail.com
 - # 1.0
 - The first version.
 
-
+# Features
 - Restrict a certain amount of requests in a specified time window.
 - Add a limit to the number of times an IP can be rate-limited (blocked).
 - Punish IPs for exceeding the max number of times an IP can be blocked by either black-listing them or block them for extended duration.
