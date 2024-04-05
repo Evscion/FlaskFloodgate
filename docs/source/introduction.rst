@@ -15,7 +15,3 @@ Installation
 .. code-block:: shell
     
    pip install FlaskFloodgate
-
-Caution
-============
-This package hasn't been rigorously tested under high-load environments. So, please be cautious about where it is going to be used. 

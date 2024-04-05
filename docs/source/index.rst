@@ -13,7 +13,7 @@ Welcome to FlaskFloodgate's documentation!
    introduction
    features
    examples
-   FlaskFloodgate
+   modules
 
 Indices and tables
 ==================

@@ -1,10 +1,10 @@
-FlaskFloodgate
+FlaskFloodgate.handlers
 ============================
 
 Module contents
 ---------------
 
-.. automodule:: FlaskFloodgate
+.. automodule:: FlaskFloodgate.handlers
    :members:
    :undoc-members:
    :show-inheritance:
