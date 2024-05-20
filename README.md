@@ -15,7 +15,6 @@ FlaskFloodgate is a small Python package that provides rate limiting functionali
 
 # TODO
 - **Multiple DB**: Implement availability for other DBs.
-- **Request Cooldown**: A cooldown after each request.
 - **Improved logging**: As of now, only INFO logs are made.
 - **Adaptive blocking**: Increase the window/block duration based on the severity level.
 
