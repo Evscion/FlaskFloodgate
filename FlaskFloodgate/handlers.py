@@ -5,13 +5,13 @@ import sqlite3
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
-__all__ = ["DBHandler", "MemoryHandler", "Sqlite3Handler", "RedisHandler"]
+__all__ = ["DBHandler", "MemoryHandler", "Sqlite3Handler"]
 
 class IP:
     """
     Represents an IP.
     """
-    addr: str
+    addr: str = ""
     amount: int
     lwrl: float | int
     blocked: int
@@ -22,9 +22,9 @@ class DBHandler(ABC):
 
     Default Handlers provided
     *************************
-        :class:`MemoryHandler`\n
+        :clasS:`MemoryHandler`\n
         :clasS:`Sqlite3Handler`\n
-        :class:`RedisHandler`\n
+        :class:`RedisHandler`
 
     :TODO: Add support for `JSON`.
     """
@@ -199,7 +199,7 @@ class RedisHandler(DBHandler):
         res = self.conn.get(ip)
         if res:
             res = json.loads(res)
-            ip = IP()
+            ip: IP = IP()
 
             ip.addr = res["addr"]
             ip.amount = res["amount"]
@@ -223,7 +223,7 @@ class RedisHandler(DBHandler):
             "lwrl": ip.lwrl,
             "blocked": ip.blocked
         }
-        self.conn.setex(ip.addr, json.dumps(data), ip.lwrl)
+        self.conn.setex(ip.addr, int(ip.lwrl), json.dumps(data))
 
     def blacklist_ip(self, ip: str, ddw: bool = True):
         """
@@ -272,21 +272,15 @@ class RedisHandler(DBHandler):
         self.conn.delete(f"whitelist:{ip}")
 
 class MemoryHandler(DBHandler):
-    def __init__(self, separate_data: bool = True):
+    def __init__(self):
         """
         A custom subclass of `DBHandler`. Represents a `RAM / Memory` Handler for IP-related data.
-
-        :param separate_data: Indicates whether to have different variables for normal data, blacklist and whitelist, defaults to `True`.
-        :type separate_data: bool, optional
         """
         super().__init__()
 
         self._cache = {}
-        self._sep = separate_data
-
-        if self._sep:
-            self.blacklist = []
-            self.whitelist = []
+        self._blacklist = []
+        self._whitelist = []
 
     def is_whitelisted(self, ip: str):
         """
@@ -298,7 +292,7 @@ class MemoryHandler(DBHandler):
         :return: A boolean value indicating whether the IP is whitelisted or not.
         :rtype: bool
         """
-        return (self._sep and ip in self.whitelist) or self._cache.get(f"whitelist:{ip}")
+        return ip in self._whitelist
     
     def is_blacklisted(self, ip: str):
         """
@@ -310,7 +304,7 @@ class MemoryHandler(DBHandler):
         :return: A boolean value indicating whether the IP is blacklisted or not.
         :rtype: bool
         """
-        return (self._sep and ip in self.blacklist) or self._cache.get(f"blacklist:{ip}")
+        return ip in self._blacklist
     
     def save_ip(self, ip: IP):
         """
@@ -319,14 +313,7 @@ class MemoryHandler(DBHandler):
         :param ip: The IP to save.
         :type ip: :class:`IP`
         """
-        self._cache.update({
-            ip.addr: {
-                "addr": ip.addr,
-                "amount": ip.amount,
-                "lwrl": ip.lwrl,
-                "blocked": ip.blocked
-            }
-        })
+        self._cache.update({ip.addr: ip})
 
     def get_ip(self, ip: str):
         """
@@ -338,15 +325,7 @@ class MemoryHandler(DBHandler):
         :return: The retrieved :class:`IP` or `None` (if not found).
         :rtype: Union[:class:`IP`, `None`]
         """
-        data = self._cache.get(ip)
-        if data:
-            ip: IP = IP()
-            ip.addr = data["addr"]
-            ip.amount = data["amount"]
-            ip.lwrl = data["lwrl"]
-            ip.blocked = data["blocked"]
-            return ip
-        return None
+        return self._cache.get(ip, None)
     
     def blacklist_ip(self, ip: str, ddw: bool = True):
         """
@@ -358,17 +337,13 @@ class MemoryHandler(DBHandler):
         :param ddw: Indicates whether to delete the IP data when it is blacklisted, defaults to `True`.
         :type ddw: bool, optional
         """
-        if self._sep:
-            if ip in self.whitelist:
-                self.whitelist.remove(ip)
-            if ddw:
-                self._cache.pop(ip, None)
-            self.blacklist.append(ip)
-        else:
-            if ddw:
-                self._cache.pop(ip, None)
-            self._cache.pop(f"whitelist:{ip}", None)
-            self._cache.update({f"blacklist:{ip}": ip})
+        self.de_whitelist_ip(ip)
+
+        if not self.is_blacklisted(ip):
+            self._blacklist.append(ip)
+
+        if ddw:
+            self._cache.pop(ip, None)
 
     def de_blacklist_ip(self, ip: str) -> None:
         """
@@ -377,11 +352,8 @@ class MemoryHandler(DBHandler):
         :param ip: The IP to de-blacklist.
         :type ip: str
         """
-        if self._sep:
-            if ip in self.blacklist:
-                self.blacklist.remove(ip)
-        else:
-            self._cache.pop(f"blacklist:{ip}", None)
+        if self.is_blacklisted(ip):
+            self._blacklist.remove(ip)
 
     def whitelist_ip(self, ip: str, ddw: bool = True):
         """
@@ -393,17 +365,13 @@ class MemoryHandler(DBHandler):
         :param ddw: Indicates whether to delete the IP data when it is whitelisted, defaults to `True`.
         :type ddw: bool, optional
         """
-        if self._sep:
-            if ip in self.blacklist:
-                self.blacklist.remove(ip)
-            if ddw:
-                self._cache.pop(ip, None)
-            self.whitelist.append(ip)
-        else:
-            if ddw:
-                self._cache.pop(ip, None)
-            self._cache.pop(f"blacklist:{ip}", None)
-            self._cache.update({f"whitelist:{ip}": ip})
+        self.de_blacklist_ip(ip)
+
+        if not self.is_whitelisted(ip):
+            self._whitelist.append(ip)
+
+        if ddw:
+            self._cache.pop(ip, None)
 
     def de_whitelist_ip(self, ip: str) -> None:
         """
@@ -412,11 +380,8 @@ class MemoryHandler(DBHandler):
         :param ip: The IP to whitelist.
         :type ip: str
         """
-        if self._sep:
-            if ip in self.whitelist:
-                self.whitelist.remove(ip)
-        else:
-            self._cache.pop(f"whitelist:{ip}")
+        if self.is_whitelisted(ip):
+            self._whitelist.remove(ip)
 
 class Sqlite3Handler(DBHandler):
     def __init__(self, fp: str, table_name: str, extra_table_name: str) -> None:
@@ -503,7 +468,7 @@ class Sqlite3Handler(DBHandler):
         :param ip: The IP to save.
         :type ip: :class:`IP`
         """
-        if not self.get_ip(ip):
+        if not self.get_ip(ip.addr):
             with self._connect() as (conn, cursor):
                 cursor.execute(f"INSERT INTO {self.table} (ip, amount, lwrl, blocked) VALUES (?, ?, ?, ?)", (ip.addr, ip.amount, ip.lwrl, ip.blocked))
                 conn.commit()
@@ -527,11 +492,12 @@ class Sqlite3Handler(DBHandler):
 
         if res:
             ip: IP = IP()
-            ip.addr = ip[0]
-            ip.amount = ip[1]
-            ip.lwrl = ip[2]
-            ip.blocked = ip[3]
+            ip.addr = res[0]
+            ip.amount = res[1]
+            ip.lwrl = res[2]
+            ip.blocked = res[3]
             return ip
+        
         return None
     
     def blacklist_ip(self, ip: str, ddw: bool = True):

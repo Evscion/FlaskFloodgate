@@ -15,7 +15,7 @@ FlaskFloodgate is a small Python package that provides rate limiting functionali
 
 # TODO
 - **Multiple DB**: Implement availability for other DBs.
-- **Improved logging**: As of now, only INFO logs are made.
+- **Request Cooldown**: A cooldown after each request.
 - **Adaptive blocking**: Increase the window/block duration based on the severity level.
 
 # Installation
@@ -38,8 +38,9 @@ app = Flask(__name__)
 # No need to specify all the parameters.
 handler = RateLimiter(
     db=MemoryHandler(),
-    amount=20, # All parameters below this are optional.
-    time_window=timedelta(minutes=1)
+    amount=20,
+    time_window=timedelta(minutes=1),
+    block_duration=timedelta(minutes=5),
     block_limit=5,
     block_exceed_duration=timedelta(days=1),
     relative_block=True,
@@ -70,6 +71,11 @@ For detailed functions, check out the documentation: [FlaskFloodgate Documentati
 You can contact me on my email: ivoscev@gmail.com
 
 # Updates
+- # 1.2
+- Improved rate-limiting logic.
+- Improved `MemoryHandler`.
+- Fixed bugs with `RedisHandler`. 
+
 - # 1.1
 - Updated with a runtime terminal.
 - Moved rate limiting parameters to the `RateLimiter` handler instead of the `DBHandler`.
@@ -81,3 +87,4 @@ You can contact me on my email: ivoscev@gmail.com
 
 - # 1.0
 - The first version.
+
