@@ -12,6 +12,7 @@ FlaskFloodgate is a small Python package that provides rate limiting functionali
 - Allow IPs to accumulate requests from past request windows.
 - Allow requests with certain data.
 - Blacklist and whitelist IPs during runtime.
+- Can create your own custom DB Handler to manage IP data.
 
 # TODO
 - **Multiple DB**: Implement availability for other DBs.
