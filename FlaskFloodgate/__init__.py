@@ -233,7 +233,6 @@ class RateLimiter:
         """        
         delay = 0 if backoff == 'Linear' else 1
         for _ in range(attempts):
-            print('attemp')
             try:
                 func(*args, **kwargs)
                 if success_msg:
