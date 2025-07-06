@@ -159,8 +159,7 @@ class RateLimiter:
             accumulate_requests=data["accumulate"],
             max_window_duration=data["mwd"],
             dl_data_wb=data["ddw"],
-            logger=logger,
-            export_dir=None
+            logger=logger
         )
 
         if rule:

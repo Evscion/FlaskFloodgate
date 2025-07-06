@@ -26,7 +26,6 @@ Usage
        accumulate_requests=True,
        dl_data_wb=True,
        logger=logging.Logger("FlaskFloodgate"),
-       export_dir=os.getcwd()
    )
    
    handler = RateLimiter(db=db)
