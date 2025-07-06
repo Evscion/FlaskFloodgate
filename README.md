@@ -41,16 +41,14 @@ handler = RateLimiter(
     db=MemoryHandler(),
     amount=20,
     time_window=timedelta(minutes=1),
-    block_duration=timedelta(minutes=5),
+    block_duration=timedelta(minutes=5), # All params below this are optional.
     block_limit=5,
     block_exceed_duration=timedelta(days=1),
     relative_block=True,
-    block_exceed_reset=True,
     max_window_duration=timedelta(days=2),
     accumulate_requests=True,
     dl_data_wb=True,
     logger=logging.Logger("FlaskFloodgate"),
-    export_dir=os.getcwd()
 )
 
 handler = RateLimiter(db=db)
@@ -72,6 +70,9 @@ For detailed functions, check out the documentation: [FlaskFloodgate Documentati
 You can contact me on my email: ivoscev@gmail.com
 
 # Updates
+- # 1.1.3
+- Fixed few bugs.
+
 - # 1.1.2
 - Improved rate-limiting logic.
 - Improved `MemoryHandler`.

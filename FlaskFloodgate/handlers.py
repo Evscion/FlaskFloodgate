@@ -22,8 +22,8 @@ class DBHandler(ABC):
 
     Default Handlers provided
     *************************
-        :clasS:`MemoryHandler`\n
-        :clasS:`Sqlite3Handler`\n
+        :class:`MemoryHandler`\n
+        :class:`Sqlite3Handler`\n
         :class:`RedisHandler`
 
     :TODO: Add support for `JSON`.
@@ -384,7 +384,7 @@ class MemoryHandler(DBHandler):
             self._whitelist.remove(ip)
 
 class Sqlite3Handler(DBHandler):
-    def __init__(self, fp: str, table_name: str, extra_table_name: str) -> None:
+    def __init__(self, fp: str, table_name: str, extra_table_name: str, wal_mode: bool = False) -> None:
         """
         A custom subclass of `DBHandler`. Represents an `Sqlite3` Handler for IP-related data.
 
@@ -396,6 +396,9 @@ class Sqlite3Handler(DBHandler):
 
         :param extra_table_name: The name of the extra table where the blacklist and whitelist data are stored.
         :type extra_table_name: str
+
+        :param wal_mode: Indicates whether to set the journal_mode to `wal`, defaults to `False`.
+        :type wal_mode: bool, optional
         """
         super().__init__()
         self.fp = fp
@@ -417,6 +420,10 @@ class Sqlite3Handler(DBHandler):
                     data TEXT
                 )
             """)
+
+            if wal_mode:
+                cursor.execute("PRAGMA journal_mode=WAL")
+
             conn.commit()
 
     @contextmanager
