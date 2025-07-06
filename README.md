@@ -70,6 +70,9 @@ For detailed functions, check out the documentation: [FlaskFloodgate Documentati
 You can contact me on my email: ivoscev@gmail.com
 
 # Updates
+- # 1.1.3
+- Fixed few bugs.
+
 - # 1.1.2
 - Improved rate-limiting logic.
 - Improved `MemoryHandler`.
