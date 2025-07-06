@@ -5,7 +5,7 @@ import sqlite3
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
-__all__ = ["DBHandler", "MemoryHandler", "Sqlite3Handler"]
+__all__ = ["DBHandler", "MemoryHandler", "Sqlite3Handler", "RedisHandler"]
 
 class IP:
     """
