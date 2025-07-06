@@ -28,8 +28,6 @@ Usage
        logger=logging.Logger("FlaskFloodgate"),
    )
    
-   handler = RateLimiter(db=db)
-   
    @app.route('/rate-limited')
    @handler.rate_limited_route()
    def rate_limited():
