@@ -22,14 +22,12 @@ class RateLimiter:
             block_duration: timedelta,
             block_limit: Union[int, None] = 5,
             block_exceed_duration: Union[timedelta, Literal["FOREVER"]] = timedelta(days=1),
-            block_exceed_reset: bool = True,
             accumulate_requests: bool = False,
             relative_block: bool = True,
             max_window_duration: Union[timedelta, Literal["FOREVER"]] = timedelta(days=2),
             dl_data_wb: bool = True,
             db_error_retries: int = 3,
-            logger: logging.Logger = None,
-            export_dir: Union[str, None] = 0
+            logger: logging.Logger = None
     ) -> None:
         """
         Represents a IP Rate Limit Handler. It helps prevent spam requests and blocks them according to their IPs.
@@ -54,9 +52,6 @@ class RateLimiter:
         :param block_exceed_duration: The time duration for which an IP is blocked if it exceeds the specified `block_limit`. If set to 'FOREVER', it will be blacklisted forever until specifically removed from the blacklist, defaults to `datetime.timedelta(days=1)`.
         :type block_exceed_duration: Union[`datetime.timedelta`, `Literal['FOREVER']`], optional
 
-        :param block_exceed_reset: If set to `True` and an IP exceeds the specified `block limit` and the `block_exceed_duration` is set to a `timedelta` object, then the IP will be blocked by `block_exceed_duration` everytime it exceeds the specified `amount` per specified `time_window`, defaults to `True`.
-        :type block_exceed_reset: bool, optional
-
         :param relative_block: If set to `True`, the `block_exceed_duration` timer (if set to a `timedelta` object) will reset and start again everytime the IP sends a request during the ongoing `block_exceed_duration` timer. If set to `False`, the `block_exceed_duration` timer (if set to a `timedelta` object) will not reset and start from the first ever blocked request for the window, defaults to `True`.
         :type relative_block: bool, optional
 
@@ -74,9 +69,6 @@ class RateLimiter:
 
         :param logger: The logger to use, defaults to `None`.
         :type logger: `logging.Logger`, optional
-
-        :param export_dir: The directory where the parameters will be exported to prevent data-loss in case of a server failure. If set to `None`, the parameters are not exported, defaults to `0` and the parameters are exported to the current working dir.
-        :type export_dir: Union[`str`, `None`], optional
         """
         self.db = db
         self.amount = amount
@@ -84,7 +76,6 @@ class RateLimiter:
         self.block_duration = block_duration.total_seconds()
         self.block_limit = block_limit
         self.bld = block_exceed_duration.total_seconds() if not isinstance(block_exceed_duration, str) else block_exceed_duration
-        self.ber = block_exceed_reset
         self.relative_block = relative_block
         self.accumulate = accumulate_requests
         self.ddw = dl_data_wb
@@ -99,30 +90,33 @@ class RateLimiter:
         if max_window_duration:
             self.mwd = round(max_window_duration.total_seconds())
 
-        if export_dir == 0:
-            export_dir = os.getcwd()
+    def export_params(self, export_fp: str = None):
+        """
+        Used to export the `RateLimiter` params. Note that the `DBHandler`, `rule` and `logger` are not exported.
 
-        if not export_dir is None:
-            expfp = os.path.join(export_dir, "Rate-Limit-Params.json")
-            with open(expfp, "w") as f:
-                json.dump(
-                    obj={
-                        "amount": self.amount,
-                        "window": self.window,
-                        "block-limit": block_limit,
-                        "bld": self.bld,
-                        "ber": self.ber,
-                        "relative-block": self.relative_block,
-                        "accumulate": accumulate_requests,
-                        "mwd": self.mwd,
-                        "ddw": self.ddw
-                    },
-                    fp=f,
-                    indent=4
-                )
+        :param export_fp: The `json` file, opened with `w`, where the params are to be exported, defaults to `None` and the params are returned in a `dict`.
+        :type export_fp: str, optional
+        """
+        data = {
+            "amount": self.amount,
+            "window": self.window,
+            "block-limit": self.block_limit,
+            "bld": self.bld,
+            "relative-block": self.relative_block,
+            "accumulate": self.accumulate,
+            "mwd": self.mwd,
+            "ddw": self.ddw
+        }
+        if not export_fp:
+            return data
+        
+        json.dump(
+            obj=data,
+            fp=export_fp,
+            indent=4
+        )
 
-            print(f"The Rate-Limit Parameters have been exported to the following file:\n{expfp}\nTo load the parameters, use the `load_params` method. (The db, rule and logger are not exported. They need to be specified when loading.)")
-
+    @staticmethod
     def load_params(db: DBHandler, export_fp: str = None, rule: Callable[[flask.Request], bool] = None, logger = None):
         """
         Used to load the previously exported parameters.
@@ -157,7 +151,7 @@ class RateLimiter:
         r = RateLimiter(
             db=db,
             amount=data["amount"],
-            time_window=data["window"],
+            time_window=timedelta(seconds=data["window"]),
             block_limit=data["block-limit"],
             block_exceed_duration=data["bld"],
             block_exceed_reset=data["ber"],
@@ -174,16 +168,19 @@ class RateLimiter:
 
         return r
 
-    def log_info(self, msg: str):
+    def log(self, msg: str, level: int = 20):
         """
-        Used to log `INFO` level messages using the logger.
+        Used to log messages using the logger.
         Helps prevent excess lines of checking if the logger is set or not.
 
         :param msg: The message to log.
         :type msg: str
+
+        :param level: The level to log the message, defaults to `20`.
+        :type level: int, optional
         """
         if self.logger:
-            self.logger.info(msg)
+            self.logger.log(level=level, msg=msg)
 
     def set_rule(self, rule: Callable[[flask.Request], bool], override: bool = False):
         """
@@ -236,7 +233,7 @@ class RateLimiter:
             try:
                 func(*args, **kwargs)
                 if success_msg:
-                    self.log_info(success_msg)
+                    self.log(success_msg)
                 break
             except Exception:
                 if backoff == 'Linear':
@@ -245,8 +242,23 @@ class RateLimiter:
                     delay *= 2
                 time.sleep(delay)
         else:
-            self.logger.critical(fail_msg)
+            self.log(fail_msg, 50)
 
+    def _check_ip_obj(self, ip_str: str, crtime = time.time()) -> IP:
+        ip = self.db.get_ip(ip_str)
+
+        if not ip or ip.lwrl <= crtime:
+            if not ip:
+                ip = IP()
+                ip.amount = 0
+            elif ip.lwrl <= crtime:
+                ip.amount = 0 if not self.accumulate else -(self.amount - ip.amount)
+
+            ip.addr = ip_str
+            ip.lwrl = (crtime + self.window)
+            ip.blocked = 0
+
+        return ip
 
     def rate_limited_route(self):
         """
@@ -285,7 +297,7 @@ class RateLimiter:
         def wrapper(func):
             @wraps(func)
             def inner(*args, **kwargs):
-                ip_str = flask.request.remote_addr
+                ip_str = kwargs.get('ip')
                 crtime = time.time()
 
                 if (self.rule and self.rule(ip_str)) or self.db.is_whitelisted(ip_str):
@@ -293,20 +305,10 @@ class RateLimiter:
                 
                 if self.db.is_blacklisted(ip_str):
                     m = f"IP - '{ip_str}' is already blacklisted."
-                    self.log_info(m)
+                    self.log(m)
                     return json.dumps({"error": m}), 429
                 
-                ip = self.db.get_ip(ip_str)
-                if not ip or ip.lwrl <= crtime: # Create a new IP obj if IP is not present in the db or its `lwrl` has expired.
-                    if not ip:
-                        ip = IP()
-                        ip.amount = 0
-                    else:
-                        ip.amount = 0 if not self.accumulate else -(self.amount - ip.amount)
-
-                    ip.addr = ip_str
-                    ip.lwrl = (crtime + self.window)
-                    ip.blocked = 0
+                ip = self._check_ip_obj(ip_str, crtime)
  
                 ip.amount += 1
                 if ip.amount > self.amount:
@@ -349,7 +351,6 @@ class RateLimiter:
                         args=(ip,),
                         backoff='Linear'
                     )
-
                     return json.dumps({"error": f" Please wait {round(max(ip.lwrl - crtime, 0))}s."}), 429
                 
                 # Save in DB using linear backoff (1) for `self.der` attempts.
@@ -388,7 +389,8 @@ class RateLimiter:
            rlhandler = RateLimitHandler(
                db=MemoryHandler(),
                amount=30,
-               time_window=timedelta(minutes=1) # Configure other params if required
+               time_window=timedelta(minutes=1),
+               block_duration=timedelta(minutes=30) # Configure other params if required.
            )
 
            # Initialization of the `Flask` app and other essentials.
