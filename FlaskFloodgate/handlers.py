@@ -22,8 +22,8 @@ class DBHandler(ABC):
 
     Default Handlers provided
     *************************
-        :clasS:`MemoryHandler`\n
-        :clasS:`Sqlite3Handler`\n
+        :class:`MemoryHandler`\n
+        :class:`Sqlite3Handler`\n
         :class:`RedisHandler`
 
     :TODO: Add support for `JSON`.

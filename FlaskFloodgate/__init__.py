@@ -35,13 +35,13 @@ class RateLimiter:
         If the IP gets blocked more than the specified `block limit`, it is blacklisted. Most of the work is done by the specified `DB` handler.
 
         :param db: The IP handler to use.
-        :type db: :class:`FlaskFloodgate.DBHandler`
+        :type db: :class:`DBHandler`
 
         :param amount: The maximum amount of requests allowed for an IP in `time_window` time.
         :type amount: int
 
         :param time_window: The time window in which the specified `amount` requests are allowed.
-        :type amount: :class:`datetime.timedelta`
+        :type amount: `datetime.timedelta`
 
         :param block_duration: The time for which an IP is blocked (if it is still under the `block_limit`).
         :type block_duration: timedelta
@@ -263,11 +263,6 @@ class RateLimiter:
     def rate_limited_route(self):
         """
         It wraps a `Flask` route and rate-limits the IPs.
-
-        TODO
-        ===============
-        1. The `self.bld` is added everytime the block limit is exceeded.
-        2. Relative block isn't applicable for `self.bld`.
 
         Usage
         ==========
